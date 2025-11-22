@@ -17,17 +17,13 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart }) => {
 
       {/* Logo Container */}
       <div className="relative z-10 flex flex-col items-center mb-12 animate-float">
-        <div className="relative">
-          <Crown className="w-24 h-24 text-amber-400 fill-amber-500 drop-shadow-[0_0_25px_rgba(251,191,36,0.6)]" strokeWidth={1.5} />
-          <Star className="absolute -top-2 -right-4 w-8 h-8 text-white fill-white animate-bounce" />
-          <Star className="absolute top-4 -left-6 w-6 h-6 text-indigo-300 fill-indigo-300 animate-pulse" style={{ animationDelay: '0.5s' }} />
+        <img src="/logo.png" alt="Royal Merge Kingdom" className="w-80 max-w-[90vw] drop-shadow-[0_0_40px_rgba(251,191,36,0.5)] animate-pulse" style={{ animationDuration: '3s' }} />
+        <div className="absolute -top-4 -right-8">
+          <Star className="w-8 h-8 text-white fill-white animate-bounce" />
         </div>
-        
-        <h1 className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-b from-white to-slate-400 mt-4 text-center leading-tight drop-shadow-lg">
-          ROYAL<br/>
-          <span className="text-6xl bg-gradient-to-r from-amber-300 via-yellow-400 to-amber-500 bg-clip-text text-transparent">MERGE</span><br/>
-          KINGDOM
-        </h1>
+        <div className="absolute top-8 -left-8">
+          <Star className="w-6 h-6 text-amber-300 fill-amber-300 animate-pulse" style={{ animationDelay: '0.5s' }} />
+        </div>
       </div>
 
       {/* Play Button */}

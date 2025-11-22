@@ -35,6 +35,17 @@ export interface PlayerState {
   maxEnergy: number;
   xp: number;
   level: number;
+  achievements: string[];
+  unlockedAreas: number;
+  battlesCompleted: number;
+}
+
+export interface Achievement {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  unlocked: boolean;
 }
 
 export type GameTab = 'merge' | 'kingdom' | 'adventure';

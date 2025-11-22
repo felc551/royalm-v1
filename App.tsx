@@ -11,8 +11,11 @@ import { ShopModal } from './components/ShopModal';
 import { SettingsModal } from './components/SettingsModal';
 import { TutorialOverlay } from './components/TutorialOverlay';
 import { Match3Board } from './components/Match3Board';
-import { Zap, Gem, Coins, Map, Grid as GridIcon, Sword, Settings, Plus, ShoppingCart } from 'lucide-react';
+import { AchievementsModal } from './components/AchievementsModal';
+import { Zap, Gem, Coins, Map, Grid as GridIcon, Sword, Settings, Plus, ShoppingCart, Trophy } from 'lucide-react';
 import { playSound } from './utils/audio';
+import { ACHIEVEMENTS } from './utils/achievements';
+import { Achievement } from './types';
 
 const App: React.FC = () => {
   // --- State ---
@@ -24,6 +27,8 @@ const App: React.FC = () => {
   const [showShop, setShowShop] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
+  const [showAchievements, setShowAchievements] = useState(false);
+  const [achievements, setAchievements] = useState<Achievement[]>(ACHIEVEMENTS);
   
   // Match 3 State
   const [activeMission, setActiveMission] = useState<any | null>(null);
@@ -34,7 +39,10 @@ const App: React.FC = () => {
     energy: 30,
     maxEnergy: 50,
     xp: 0,
-    level: 1
+    level: 1,
+    achievements: [],
+    unlockedAreas: 0,
+    battlesCompleted: 0
   });
 
   const [grid, setGrid] = useState<GridSlot[]>(() => 
@@ -109,8 +117,8 @@ const App: React.FC = () => {
       }
 
       // Case 2: Merge
-      if (toSlot.item && 
-          toSlot.item.type === fromSlot.item.type && 
+      if (toSlot.item &&
+          toSlot.item.type === fromSlot.item.type &&
           toSlot.item.level === fromSlot.item.level &&
           toSlot.item.level < MAX_ITEM_LEVEL
       ) {
@@ -121,11 +129,17 @@ const App: React.FC = () => {
           isNew: true,
           effectType: 'merge'
         };
-        
+
         newGrid[toIndex].item = newItem;
         newGrid[fromIndex].item = null;
         setPlayer(p => ({ ...p, xp: p.xp + (newItem.level * 2) }));
         playSound('merge');
+
+        unlockAchievement('first_merge');
+        if (newItem.level === MAX_ITEM_LEVEL) {
+          unlockAchievement('max_item');
+        }
+
         return newGrid;
       }
 
@@ -170,7 +184,7 @@ const App: React.FC = () => {
     }
 
     if (player.gold >= parcel.costGold && itemsFound) {
-      setPlayer(prev => ({ ...prev, gold: prev.gold - parcel.costGold, xp: prev.xp + 50 }));
+      setPlayer(prev => ({ ...prev, gold: prev.gold - parcel.costGold, xp: prev.xp + 50, unlockedAreas: prev.unlockedAreas + 1 }));
       setGrid(prev => {
         const next = [...prev];
         itemsToConsume.forEach(idx => {
@@ -180,6 +194,10 @@ const App: React.FC = () => {
       });
       setParcels(prev => prev.map(p => p.id === parcelId ? { ...p, isUnlocked: true } : p));
       playSound('magic');
+
+      unlockAchievement('first_area');
+      if (parcelId === 'p7') unlockAchievement('dragon_tamer');
+      if (player.unlockedAreas + 1 === INITIAL_PARCELS.length) unlockAchievement('all_areas');
     } else {
       playSound('error');
       alert("Not enough resources!");
@@ -201,6 +219,10 @@ const App: React.FC = () => {
           const level = Math.floor(Math.random() * 2) + 1;
           spawnItem(activeMission.rewardType, level);
           playSound('success');
+          setPlayer(p => ({ ...p, battlesCompleted: p.battlesCompleted + 1 }));
+          if (player.battlesCompleted + 1 >= 10) {
+            unlockAchievement('battle_master');
+          }
       }
       setActiveMission(null);
   };
@@ -213,6 +235,23 @@ const App: React.FC = () => {
       return slot;
     }));
   };
+
+  const unlockAchievement = (achievementId: string) => {
+    setAchievements(prev => prev.map(a =>
+      a.id === achievementId ? { ...a, unlocked: true } : a
+    ));
+    if (!player.achievements.includes(achievementId)) {
+      setPlayer(p => ({ ...p, achievements: [...p.achievements, achievementId], gems: p.gems + 2 }));
+      playSound('success');
+    }
+  };
+
+  useEffect(() => {
+    if (player.level >= 5) unlockAchievement('level_5');
+    if (player.level >= 10) unlockAchievement('level_10');
+    if (player.level >= 20) unlockAchievement('grand_master');
+    if (player.gold >= 10000) unlockAchievement('rich');
+  }, [player.level, player.gold]);
 
   const startGame = () => {
       playSound('magic');
@@ -244,6 +283,7 @@ const App: React.FC = () => {
       {showShop && <ShopModal gems={player.gems} onClose={() => setShowShop(false)} onBuyEnergy={() => {setPlayer(p=>({...p, energy: p.maxEnergy, gems: p.gems-5})); setShowShop(false)}} onBuyGold={() => {setPlayer(p=>({...p, gold: p.gold+500, gems: p.gems-10})); setShowShop(false)}} onBuyChest={() => {setPlayer(p=>({...p, gems: p.gems-15})); setShowShop(false); spawnItem(ItemType.WOOD, 4);}} />}
       {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
       {showTutorial && <TutorialOverlay onClose={() => setShowTutorial(false)} />}
+      {showAchievements && <AchievementsModal achievements={achievements} onClose={() => setShowAchievements(false)} />}
 
       {/* --- Header (Resource Bar) --- */}
       <div className="relative z-10 p-2">
@@ -262,7 +302,7 @@ const App: React.FC = () => {
              </div>
 
              {/* Resources */}
-             <div className="flex items-center gap-3">
+             <div className="flex items-center gap-2">
                  <div className="flex flex-col items-end">
                      <div className="flex items-center gap-1">
                          <span className="text-white font-bold">{player.energy}</span>
@@ -273,6 +313,14 @@ const App: React.FC = () => {
                          <Coins className="w-4 h-4 text-amber-400 fill-amber-400" />
                      </div>
                  </div>
+                 <button onClick={() => setShowAchievements(true)} className="bg-amber-600 p-2 rounded-lg border-b-4 border-amber-800 active:border-b-0 active:translate-y-1 relative">
+                     <Trophy className="w-4 h-4 text-white" />
+                     {player.achievements.length > 0 && (
+                       <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center text-[8px] font-bold text-white border border-white">
+                         {player.achievements.length}
+                       </div>
+                     )}
+                 </button>
                  <button onClick={() => setShowShop(true)} className="bg-green-600 p-2 rounded-lg border-b-4 border-green-800 active:border-b-0 active:translate-y-1">
                      <Plus className="w-5 h-5 text-white" />
                  </button>
@@ -302,8 +350,9 @@ const App: React.FC = () => {
                 />
             )}
             {activeTab === 'adventure' && (
-                <AdventureMap 
+                <AdventureMap
                     energy={player.energy}
+                    playerLevel={player.level}
                     onStartMission={handleStartMission}
                 />
             )}
